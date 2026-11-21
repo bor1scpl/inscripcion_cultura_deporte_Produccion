@@ -16,6 +16,8 @@ app.use(express.static(fileURLToPath(new URL('../../web/dist/', import.meta.url)
 app.use(gestionarErrores);
 
 await prisma.$connect();
-app.listen(entorno.puerto, '127.0.0.1', () => {
-  console.log(`Portal de Bienestar disponible en http://127.0.0.1:${entorno.puerto}`);
+
+const puerto = process.env.PORT ? parseInt(process.env.PORT, 10) : (entorno.puerto || 3001);
+app.listen(puerto, '0.0.0.0', () => {
+  console.log(`Portal de Bienestar disponible en http://0.0.0.0:${puerto}`);
 });
