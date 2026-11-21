@@ -1,0 +1,27 @@
+{
+  "name": "portal-bienestar",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others -n API,WEB \"npm run dev -w @bienestar/api\" \"npm run dev -w @bienestar/web\"",
+    "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
+    "db:seed": "tsx --env-file=.env apps/api/prisma/seed.ts",
+    "build": "npm run db:generate && npm run build --workspaces --if-present",
+    "test": "vitest run",
+    "start": "tsx --env-file=.env apps/api/src/index.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prisma": "6.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

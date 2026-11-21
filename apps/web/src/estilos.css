@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+html {
+  color-scheme: light;
+  scroll-padding-top: 1rem;
+}
+
+body {
+  background: #f1f4f4;
+  color: #122d30;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 3px solid #b75313;
+  outline-offset: 4px;
+}
+
+@layer components {
+  .boton {
+    @apply inline-flex justify-center rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white hover:bg-teal-950 disabled:cursor-wait disabled:bg-slate-600;
+  }
+
+  .secundario {
+    @apply inline-flex justify-center rounded-lg border border-teal-800 px-4 py-2 font-semibold text-teal-900 hover:bg-teal-50;
+  }
+
+  .campo {
+    @apply w-full rounded-lg border border-slate-500 bg-white px-3 py-2.5 text-slate-900 aria-invalid:border-red-700;
+  }
+}
