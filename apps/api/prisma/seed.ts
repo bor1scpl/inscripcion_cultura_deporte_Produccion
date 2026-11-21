@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
 import { ofertaCultural } from './oferta-cultural';
 
 const prisma = new PrismaClient();
@@ -32,8 +31,8 @@ function hora(valor: string) {
   return new Date(`1970-01-01T${valor}:00Z`);
 }
 
-async function unificarDanzasModernas(tx: Prisma.TransactionClient) {
-  const fichas = await tx.disciplina.findMany({
+async function unificarDanzasModernas() {
+  const fichas = await prisma.disciplina.findMany({
     where: { tipo: 'CULTURA', nombre: { in: [danzasModernas, ...fichasAnteriores] } },
     select: { id: true, nombre: true },
   });
@@ -43,26 +42,26 @@ async function unificarDanzasModernas(tx: Prisma.TransactionClient) {
 
   for (const ficha of fichas) {
     if (ficha.id === fichaPrincipal.id) continue;
-    await tx.postulacion.updateMany({
+    await prisma.postulacion.updateMany({
       where: { disciplinaId: ficha.id },
       data: { disciplinaId: fichaPrincipal.id },
     });
-    await tx.horario.deleteMany({ where: { disciplinaId: ficha.id } });
-    await tx.disciplina.delete({ where: { id: ficha.id } });
+    await prisma.horario.deleteMany({ where: { disciplinaId: ficha.id } });
+    await prisma.disciplina.delete({ where: { id: ficha.id } });
   }
   if (fichaPrincipal.nombre !== danzasModernas) {
-    await tx.disciplina.update({ where: { id: fichaPrincipal.id }, data: { nombre: danzasModernas } });
+    await prisma.disciplina.update({ where: { id: fichaPrincipal.id }, data: { nombre: danzasModernas } });
   }
 }
 
-async function cargarCultura(tx: Prisma.TransactionClient) {
-  await unificarDanzasModernas(tx);
-  await tx.disciplina.updateMany({
+async function cargarCultura() {
+  await unificarDanzasModernas();
+  await prisma.disciplina.updateMany({
     where: { tipo: 'CULTURA', publicada: true, nombre: { notIn: ofertaCultural.map(({ nombre }) => nombre) } },
     data: { publicada: false },
   });
   for (const { nombre, descripcion, horarios } of ofertaCultural) {
-    const disciplina = await tx.disciplina.upsert({
+    const disciplina = await prisma.disciplina.upsert({
       where: { nombre },
       update: { publicada: true },
       create: {
@@ -82,35 +81,35 @@ async function cargarCultura(tx: Prisma.TransactionClient) {
         && actual.fin.getTime() === nuevo.fin.getTime()),
     )) continue;
 
-    await tx.horario.deleteMany({ where: { disciplinaId: disciplina.id } });
+    await prisma.horario.deleteMany({ where: { disciplinaId: disciplina.id } });
     if (nuevos.length > 0) {
-      await tx.horario.createMany({ data: nuevos.map((horario) => ({ ...horario, disciplinaId: disciplina.id })) });
+      await prisma.horario.createMany({ data: nuevos.map((horario) => ({ ...horario, disciplinaId: disciplina.id })) });
     }
   }
 }
 
 async function cargarOferta() {
-  await prisma.$transaction(async (tx) => {
-    for (const { dias, inicio, fin, ...datos } of ofertaDeportiva) {
-      await tx.disciplina.upsert({
-        where: { nombre: datos.nombre },
-        update: {},
-        create: {
-          ...datos,
-          horarios: { create: dias.map((dia) => ({ dia, inicio: hora(inicio), fin: hora(fin) })) },
-        },
-      });
-    }
-    await tx.disciplina.createMany({
-      data: [
-        ...deportesSinHorario.map((nombre) => ({
-          nombre, tipo: 'DEPORTE' as const, descripcion: 'Disciplina deportiva de Bienestar Universitario.', cupoMaximo: cupoInicial,
-        })),
-      ],
-      skipDuplicates: true,
+  for (const { dias, inicio, fin, ...datos } of ofertaDeportiva) {
+    await prisma.disciplina.upsert({
+      where: { nombre: datos.nombre },
+      update: {},
+      create: {
+        ...datos,
+        horarios: { create: dias.map((dia) => ({ dia, inicio: hora(inicio), fin: hora(fin) })) },
+      },
     });
-    await cargarCultura(tx);
-  }, { timeout: 15_000 });
+  }
+
+  await prisma.disciplina.createMany({
+    data: [
+      ...deportesSinHorario.map((nombre) => ({
+        nombre, tipo: 'DEPORTE' as const, descripcion: 'Disciplina deportiva de Bienestar Universitario.', cupoMaximo: cupoInicial,
+      })),
+    ],
+    skipDuplicates: true,
+  });
+
+  await cargarCultura();
   console.log('Oferta de disciplinas disponible.');
 }
 
